@@ -1,0 +1,37 @@
+import React from "react";
+import SubmenuTopNav from "./SubmenuTopNav";
+import PersonalEnfermeria from "./PersonalEnfermeria";
+import RotacionEnfermeria from "./RotacionEnfermeria";
+import GestionEnfermeria from "./GestionEnfermeria";
+import { useSubmenuContentPaddingTop } from "../context/AppShellContext";
+import { MovimientosSyncProvider } from "../context/MovimientosSyncContext";
+
+export default function Enfermeria({ servicio = "uti", servicioId = "", hospitalId = "" }) {
+  const [activeTab, setActiveTab] = React.useState("rotacion");
+  const contentPadTop = useSubmenuContentPaddingTop();
+  const svcLabel = servicio.split("_")[0].toUpperCase();
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <SubmenuTopNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <div
+        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+        style={{ paddingTop: contentPadTop }}
+      >
+        <div className="px-4 md:px-6">
+          <MovimientosSyncProvider servicioId={servicioId} estamento="enfermeria">
+            {activeTab === "rotacion" && (
+              <RotacionEnfermeria titulo={`Rotación Enfermería ${svcLabel}`} servicioId={servicioId} estamento="enfermeria" />
+            )}
+            {activeTab === "personal" && (
+              <PersonalEnfermeria servicioId={servicioId} hospitalId={hospitalId} estamento="enfermeria" titulo={`Personal Enfermería ${svcLabel}`} />
+            )}
+            {activeTab === "gestion" && (
+              <GestionEnfermeria titulo={`Gestión Enfermería ${svcLabel}`} servicioId={servicioId} estamento="enfermeria" />
+            )}
+          </MovimientosSyncProvider>
+        </div>
+      </div>
+    </div>
+  );
+}

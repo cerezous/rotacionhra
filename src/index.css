@@ -1,0 +1,63 @@
+@import "tailwindcss";
+@plugin './hero.ts';
+
+@source '../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --login-accent: #0f766e;
+  --login-accent-soft: #67e8f9;
+  --login-accent-strong: #115e59;
+  --login-panel: #0f766e;
+  --login-panel-strong: #0f172a;
+  --login-border: rgba(148, 163, 184, 0.28);
+  --login-muted: #64748b;
+}
+
+body {
+  font-family: "Avenir Next", "SF Pro Display", "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background:
+    radial-gradient(circle at top left, rgba(103, 232, 249, 0.24), transparent 30%),
+    linear-gradient(180deg, #f8fafc 0%, #eef6f9 100%);
+  color: #0f172a;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.login-shell {
+  background:
+    radial-gradient(circle at 15% 20%, rgba(103, 232, 249, 0.22), transparent 22%),
+    radial-gradient(circle at 85% 80%, rgba(15, 118, 110, 0.14), transparent 18%),
+    linear-gradient(180deg, rgba(248, 250, 252, 0.88) 0%, rgba(240, 249, 255, 0.96) 100%);
+}
+
+/* Cartola print: solo mostrar el contenido de la cartola */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .cartola-print-area,
+  .cartola-print-area * {
+    visibility: visible;
+  }
+  .cartola-print-area {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1rem !important;
+    margin: 0 !important;
+    background: white !important;
+    box-shadow: none !important;
+    z-index: 99999 !important;
+  }
+  .cartola-print-area .no-print {
+    display: none !important;
+  }
+}
