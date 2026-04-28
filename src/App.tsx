@@ -3,7 +3,7 @@ import type { Session } from "@supabase/supabase-js";
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import { supabase } from "./lib/supabase";
-import { getCurrentSession, getUserProfile, signOutSecure } from "./lib/auth";
+import { getCurrentSession, getUserProfile, signOutOnTabClose, signOutSecure } from "./lib/auth";
 import { isSupabaseConfigured } from "./lib/env";
 import type { AuthState } from "./types";
 
@@ -102,6 +102,22 @@ function App() {
       console.error("Logout error:", error);
     }
   };
+
+  React.useEffect(() => {
+    if (!authState.session) return undefined;
+
+    const handleTabClose = () => {
+      void signOutOnTabClose().catch(() => {});
+    };
+
+    window.addEventListener("pagehide", handleTabClose);
+    window.addEventListener("beforeunload", handleTabClose);
+
+    return () => {
+      window.removeEventListener("pagehide", handleTabClose);
+      window.removeEventListener("beforeunload", handleTabClose);
+    };
+  }, [authState.session]);
 
   if (!authState.initialized) {
     return (

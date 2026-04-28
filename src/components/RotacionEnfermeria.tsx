@@ -392,10 +392,21 @@ export default function RotacionEnfermeria({ titulo = "Rotación Enfermería", s
   const [solicitudModal, setSolicitudModal] = React.useState(null);
   const [extraTurnoLibreModal, setExtraTurnoLibreModal] = React.useState(null);
   const [variasFechasModal, setVariasFechasModal] = React.useState(null);
+  const [selectionResetKey, setSelectionResetKey] = React.useState(0);
   const [savingSolicitud, setSavingSolicitud] = React.useState(false);
   const [savingExtraTurnoLibre, setSavingExtraTurnoLibre] = React.useState(false);
   const [deletingExtraTurnoLibre, setDeletingExtraTurnoLibre] = React.useState(false);
   const [deletingSolicitud, setDeletingSolicitud] = React.useState(false);
+  const hadOpenModalRef = React.useRef(false);
+
+  const anyModalOpen = Boolean(solicitudModal || extraTurnoLibreModal || variasFechasModal);
+
+  React.useEffect(() => {
+    if (!anyModalOpen && hadOpenModalRef.current) {
+      setSelectionResetKey((prev) => prev + 1);
+    }
+    hadOpenModalRef.current = anyModalOpen;
+  }, [anyModalOpen]);
 
   const fetchAsumes = React.useCallback(async () => {
     const { data } = await supabase
@@ -2536,6 +2547,7 @@ export default function RotacionEnfermeria({ titulo = "Rotación Enfermería", s
           Rotación 4to turno
         </h3>
         <TablaRotacion
+          key={`rotacion-cuarto-${selectionResetKey}`}
           personal={personalParaTabla(
             personal.filter((p) => !esFuncionarioDiurno(p)),
             asumes,
@@ -2564,6 +2576,7 @@ export default function RotacionEnfermeria({ titulo = "Rotación Enfermería", s
             </h3>
           </div>
           <TablaRotacionFuncionarioDiurno
+            key={`rotacion-diurno-${selectionResetKey}`}
             personal={personalParaTabla(personal.filter((p) => esFuncionarioDiurno(p)), asumes, mes, ano)}
             salidas={salidas}
             asumes={asumes}

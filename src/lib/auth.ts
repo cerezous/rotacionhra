@@ -12,6 +12,17 @@ export async function signOutSecure() {
   }
 }
 
+/**
+ * Cierre rápido para eventos de cierre/abandono de pestaña.
+ * Usa scope local para limpiar sesión del navegador actual.
+ */
+export async function signOutOnTabClose() {
+  const { error } = await supabase.auth.signOut({ scope: "local" });
+  if (error) {
+    throw error;
+  }
+}
+
 export async function getCurrentSession() {
   const {
     data: { session },

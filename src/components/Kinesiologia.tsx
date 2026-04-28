@@ -6,8 +6,10 @@ import GestionEnfermeria from "./GestionEnfermeria";
 import { useSubmenuContentPaddingTop } from "../context/AppShellContext";
 
 /** Rotación y gestión para estamento kinesiología (mismo patrón que Enfermería). */
-export default function Kinesiologia({ servicio = "uti", servicioId = "", hospitalId = "" }) {
-  const [activeTab, setActiveTab] = React.useState("rotacion");
+export default function Kinesiologia({ servicio = "uti", servicioId = "", hospitalId = "", activeTab: activeTabProp = "rotacion", onTabChange }) {
+  const [activeTabLocal, setActiveTabLocal] = React.useState(activeTabProp || "rotacion");
+  const activeTab = activeTabProp || activeTabLocal;
+  const setActiveTab = onTabChange || setActiveTabLocal;
   const contentPadTop = useSubmenuContentPaddingTop();
   const svcLabel = servicio.split("_")[0].toUpperCase();
 

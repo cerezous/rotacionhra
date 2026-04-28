@@ -27,17 +27,32 @@ function useMediaQuery(query: string) {
 }
 
 type ViewState = { servicioId: string; servicioCodigo: string; estamento: string };
+const TABS_VALIDAS = new Set(["rotacion", "personal", "gestion"]);
+const ESTAMENTOS_VALIDOS = new Set(["enfermeria", "kinesiologia", "tens", "auxiliares"]);
+
+const getUrlViewState = (): ViewState & { tab: string } => {
+  if (typeof window === "undefined") {
+    return { servicioId: "", servicioCodigo: "", estamento: "enfermeria", tab: "rotacion" };
+  }
+  const params = new URLSearchParams(window.location.search);
+  const servicioId = String(params.get("servicio") || "").trim();
+  const estamentoRaw = String(params.get("estamento") || "enfermeria").trim().toLowerCase();
+  const tabRaw = String(params.get("tab") || "rotacion").trim().toLowerCase();
+  return {
+    servicioId,
+    servicioCodigo: "",
+    estamento: ESTAMENTOS_VALIDOS.has(estamentoRaw) ? estamentoRaw : "enfermeria",
+    tab: TABS_VALIDAS.has(tabRaw) ? tabRaw : "rotacion",
+  };
+};
 
 export default function Dashboard({ authUser, currentUser, profileError, onLogout }) {
-  const [view, setView] = React.useState<ViewState>({
-    servicioId: "",
-    servicioCodigo: "",
-    estamento: "enfermeria",
-  });
+  const [view, setView] = React.useState<ViewState & { tab: string }>(() => getUrlViewState());
   const [servicios, setServicios] = React.useState<Servicio[]>([]);
   const [sidebarWidth, setSidebarWidth] = React.useState(SIDEBAR_WIDTH_COLLAPSED);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const isMd = useMediaQuery("(min-width: 768px)");
+  const skipNextHistoryPushRef = React.useRef(false);
 
   const displayName = currentUser
     ? `${currentUser.nombre} ${currentUser.apellidos}`.trim()
@@ -59,13 +74,17 @@ export default function Dashboard({ authUser, currentUser, profileError, onLogou
       .then(({ data }) => {
         const list = (data as Servicio[]) || [];
         setServicios(list);
-        if (list.length > 0) {
-          setView((prev) =>
-            prev.servicioId
-              ? prev
-              : { servicioId: list[0].id, servicioCodigo: list[0].codigo, estamento: "enfermeria" },
-          );
-        }
+        if (!list.length) return;
+        setView((prev) => {
+          const selected = list.find((item) => item.id === prev.servicioId) || list[0];
+          return {
+            ...prev,
+            servicioId: selected.id,
+            servicioCodigo: selected.codigo,
+            estamento: ESTAMENTOS_VALIDOS.has(prev.estamento) ? prev.estamento : "enfermeria",
+            tab: TABS_VALIDAS.has(prev.tab) ? prev.tab : "rotacion",
+          };
+        });
       });
   }, [currentUser?.hospital_id]);
 
@@ -74,21 +93,30 @@ export default function Dashboard({ authUser, currentUser, profileError, onLogou
       void onLogout?.();
       return;
     }
-    setView({ servicioId, servicioCodigo, estamento });
+    setView({
+      servicioId,
+      servicioCodigo,
+      estamento: ESTAMENTOS_VALIDOS.has(estamento) ? estamento : "enfermeria",
+      tab: "rotacion",
+    });
   };
+
+  const handleTabChange = React.useCallback((tab: string) => {
+    setView((prev) => ({ ...prev, tab: TABS_VALIDAS.has(tab) ? tab : "rotacion" }));
+  }, []);
 
   const renderContent = () => {
     if (!view.servicioId) return null;
     const hospitalId = currentUser?.hospital_id ?? "";
     switch (view.estamento) {
       case "kinesiologia":
-        return <Kinesiologia servicio={view.servicioCodigo} servicioId={view.servicioId} hospitalId={hospitalId} />;
+        return <Kinesiologia servicio={view.servicioCodigo} servicioId={view.servicioId} hospitalId={hospitalId} activeTab={view.tab} onTabChange={handleTabChange} />;
       case "enfermeria":
-        return <Enfermeria servicio={view.servicioCodigo} servicioId={view.servicioId} hospitalId={hospitalId} />;
+        return <Enfermeria servicio={view.servicioCodigo} servicioId={view.servicioId} hospitalId={hospitalId} activeTab={view.tab} onTabChange={handleTabChange} />;
       case "tens":
-        return <Tens servicio={view.servicioCodigo} servicioId={view.servicioId} hospitalId={hospitalId} />;
+        return <Tens servicio={view.servicioCodigo} servicioId={view.servicioId} hospitalId={hospitalId} activeTab={view.tab} onTabChange={handleTabChange} />;
       case "auxiliares":
-        return <Auxiliares servicio={view.servicioCodigo} servicioId={view.servicioId} hospitalId={hospitalId} />;
+        return <Auxiliares servicio={view.servicioCodigo} servicioId={view.servicioId} hospitalId={hospitalId} activeTab={view.tab} onTabChange={handleTabChange} />;
       default:
         return null;
     }
@@ -99,6 +127,44 @@ export default function Dashboard({ authUser, currentUser, profileError, onLogou
   React.useEffect(() => {
     if (isMd) setMobileMenuOpen(false);
   }, [isMd]);
+
+  React.useEffect(() => {
+    if (!servicios.length || !view.servicioId) return;
+    const svc = servicios.find((item) => item.id === view.servicioId);
+    if (!svc || svc.codigo === view.servicioCodigo) return;
+    setView((prev) => ({ ...prev, servicioCodigo: svc.codigo }));
+  }, [servicios, view.servicioCodigo, view.servicioId]);
+
+  React.useEffect(() => {
+    if (!view.servicioId) return;
+    if (skipNextHistoryPushRef.current) {
+      skipNextHistoryPushRef.current = false;
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    params.set("servicio", view.servicioId);
+    params.set("estamento", view.estamento);
+    params.set("tab", view.tab);
+    const nextUrl = `${window.location.pathname}?${params.toString()}`;
+    if (nextUrl === `${window.location.pathname}${window.location.search}`) return;
+    window.history.pushState(null, "", nextUrl);
+  }, [view.estamento, view.servicioId, view.tab]);
+
+  React.useEffect(() => {
+    const onPopState = () => {
+      const next = getUrlViewState();
+      skipNextHistoryPushRef.current = true;
+      setView((prev) => ({
+        ...prev,
+        servicioId: next.servicioId || prev.servicioId,
+        servicioCodigo: prev.servicioCodigo,
+        estamento: next.estamento,
+        tab: next.tab,
+      }));
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   const shellValue = React.useMemo(
     () => ({
